@@ -1,20 +1,114 @@
-# Reproducible Research: Peer Assessment 1
-
+# Reproducible Research:Peer Assessment 1
+This project introduces us to reproducible research and the steps required to produce quality reproducible data analysis. 
 
 ## Loading and preprocessing the data
 
-
+```{r}
+unzip("activity.zip")
+data <- read.csv("activity.csv")
+```
 
 ## What is mean total number of steps taken per day?
 
+First we transform the data to get the number of steps per day and per time interval
 
+```{r}
+library(reshape2)
+data_melt_day <- melt(data,id="date",measure.vars = c(1))
+data_cast_day <- dcast(data_melt_day,date~variable,sum)
+```
+
+Then we replace all the days which have NA values with 0 as mean and median cannot be computed with NAs
+
+```{r}
+data_cast_day_refine <- data_cast_day
+data_cast_day_refine[is.na(data_cast_day_refine[,2]),2] <- 0
+hist(data_cast_day[,2],xlab="Steps per day",main="Histogram of total steps per day",col="red")
+```
+
+Then we generate the Mean and Median of number of steps for each day
+
+```{r}
+mean_steps <- mean(data_cast_day_refine[,2])
+median_steps <- median(data_cast_day_refine[,2])
+```
+The mean and median number of steps per day are `r mean_steps` and `r median_steps` respectively.
 
 ## What is the average daily activity pattern?
 
+First, we transform the data to get the number of steps per time interval.
+Then we can plot the frequency of number of steps for each time interval averaged over days.
 
+```{r}
+data_melt_timeInterval <- melt(data,id="interval",measure.vars = c(1))
+data_melt_timeInterval_noNA <- data_melt_timeInterval[!is.na(data_melt_timeInterval[,3]),]
+data_cast_timeInterval <- dcast(data_melt_timeInterval_noNA,interval~variable,mean)
+plot(data_cast_timeInterval[,1],data_cast_timeInterval[,2],type="l",
+     xlab="Time Interval",ylab="Mean number of steps",main="Mean steps per interval averaged over days")
+```
+
+Getting the interval which has the maximum number of steps averaged over the days.
+
+```{r}
+max_steps = max(data_cast_timeInterval[,2])
+max_steps_interval = data_cast_timeInterval[data_cast_timeInterval[,2]==max_steps,1]
+```
+The interval with the maximum number of steps is `r max_steps_interval` with `r max_steps` steps.
 
 ## Imputing missing values
 
+But, the data set has quite a few missing values which would affect the quality of the results.
+```{r}
+incompleteRowCount <- sum(is.na(data[,1]))
+```
+The Number of missing values present in the data set is `r incompleteRowCount`.
 
+We can identify a strategy for filling in all of the missing values in the dataset. For this assignment, the strategy is not too sophisticated. 
+### Strategy employed :
+The missing values are replaced by the average for that time interval.
+
+```{r}
+new_data <- data
+for(i in 1:nrow(new_data))
+{   if(is.na(new_data[i,1]))
+    {   interval = new_data[i,3]
+        avgVal = data_cast_timeInterval[data_cast_timeInterval[,1]==interval,2]
+        new_data[i,1] = avgVal
+    }
+}
+```
+Other methods such as the mean/median for that day, or the mean for that 5-minute interval, etc. can be employed.
+
+The Mean and Median of number of steps for each day with the new tidy data
+```{r}
+new_data_melt_day <- melt(new_data,id="date",measure.vars = c(1))
+new_data_cast_day <- dcast(new_data_melt_day,date~variable,sum)
+mean_steps <- mean(new_data_cast_day[,2])
+median_steps <- median(new_data_cast_day[,2])
+```
+The mean is `r mean_steps` and the median is `r median_steps`.  
+
+Here, the Mean and Median seems to be the same since some days did not have any value. This can be replaced by more sophisticated methods for replacing the missing values.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+We now add weekday or weekend flag (factor variable) for analyzing the weekday|weekend effect on the number of steps in a time interval.
+
+```{r}
+new_data_day <- weekdays(as.Date(new_data[,2]))
+day <- as.factor(new_data_day == "Saturday" | new_data_day == "Sunday")
+levels(day) <- c("Weekday","Weekend")
+
+new_data <- cbind(new_data,day)
+new_data_melt_timeInterval <- melt(new_data,id=c("interval","day"),measure.vars = c(1))
+new_data_cast_timeInterval <- dcast(new_data_melt_timeInterval,day+interval~variable,mean)
+```
+
+Finally we can see the variation in the number of steps for the weekday or weekend from the below plot. (Used the ggplot2 as it has better aesthetic appearance than the lattice plot)
+
+```{r}
+library(lattice)
+xyplot( steps ~ interval | day, data = new_data_cast_timeInterval, type="l", layout=c(1,2), xlab="Interval", ylab="Number of steps")
+
+```
+
