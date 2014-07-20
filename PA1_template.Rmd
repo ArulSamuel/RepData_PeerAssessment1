@@ -79,16 +79,24 @@ for(i in 1:nrow(new_data))
 ```
 Other methods such as the mean/median for that day, or the mean for that 5-minute interval, etc. can be employed.
 
-The Mean and Median of number of steps for each day with the new tidy data
+The Histogram shows the total number of steps taken per day with the tidy data (data without missing values)
+
 ```{r}
 new_data_melt_day <- melt(new_data,id="date",measure.vars = c(1))
 new_data_cast_day <- dcast(new_data_melt_day,date~variable,sum)
+hist(new_data_cast_day[,2],xlab="Steps per day",main="Histogram of total steps per day",col="red")
+```
+
+The Mean and Median of number of steps for each day with the new tidy data
+```{r}
 mean_steps <- mean(new_data_cast_day[,2])
 median_steps <- median(new_data_cast_day[,2])
 ```
 The mean is `r mean_steps` and the median is `r median_steps`.  
 
-Here, the Mean and Median seems to be the same since some days did not have any value. This can be replaced by more sophisticated methods for replacing the missing values.
+Here, the Mean and Median seems to be the same since some days did not have any value. This can be replaced by more sophisticated methods for replacing the missing values. 
+
+It differs from the mean and median of the initial data as we considered them to be 0's rather than a strategy for handlings these missing values.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
@@ -111,4 +119,4 @@ library(lattice)
 xyplot( steps ~ interval | day, data = new_data_cast_timeInterval, type="l", layout=c(1,2), xlab="Interval", ylab="Number of steps")
 
 ```
-
+From this graph, we can see that the activity patterns vary slightly between the weekdays and the weekends signifying areas of futhur analysis.
